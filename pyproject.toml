@@ -1,7 +1,7 @@
 [project]
 name = "airdrop-monitor"
 version = "0.1.0"
-description = "Spacecoin Airdrop Monitor for Creditcoin Chain"
+description = "Creditcoin Airdrop Monitor - CLI tool for monitoring airdrop rewards"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
