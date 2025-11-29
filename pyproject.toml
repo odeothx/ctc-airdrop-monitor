@@ -1,0 +1,10 @@
+[project]
+name = "airdrop-monitor"
+version = "0.1.0"
+description = "Spacecoin Airdrop Monitor for Creditcoin Chain"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "web3>=6.0.0",
+    "httpx>=0.25.0",
+]
