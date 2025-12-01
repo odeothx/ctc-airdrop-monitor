@@ -10,4 +10,5 @@ wheels/
 .venv
 
 # User-specific wallet configuration
-wallets.json
+wallets*.json
+!wallets.example.json

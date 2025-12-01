@@ -23,7 +23,6 @@ from web3 import Web3
 from settings import (
     BLOCKSCOUT_API_URLS,
     CAMPAIGN_HASH_TO_NAME,
-    CONTRACT_ADDRESSES,
     DEFAULT_WALLETS_FILE,
     KNOWN_CAMPAIGN_NAMES,
     KNOWN_TOKENS,
@@ -138,7 +137,7 @@ class AirdropMonitor:
             ]
         else:
             self.contract_addresses = [
-                Web3.to_checksum_address(CONTRACT_ADDRESSES.get(network, CONTRACT_ADDRESSES["testnet"]))
+                Web3.to_checksum_address(addr) for addr in TESTNET_CONTRACTS
             ]
 
         # 기본 컨트랙트 (첫 번째)
@@ -873,20 +872,108 @@ def main():
             "campaign_count": 0,
         }
 
+    # 컨트랙트별 총 보상 요약 계산
+    contract_totals: dict[str, dict] = {}
+    for addr in monitor.contract_addresses:
+        contract_totals[addr] = {
+            "total_reward": 0,
+            "unclaimed": 0,
+            "claimed": 0,
+            "campaign_count": 0,
+            "campaigns": [],  # 캠페인별 상세 정보 저장
+        }
+
     if campaigns_with_rewards:
         for campaign, rewards in campaigns_with_rewards:
-            for reward in rewards:
-                name = reward["wallet_name"]
-                wallet_totals[name]["total_reward"] += reward["total_reward"]
-                wallet_totals[name]["bonus_reward"] += reward["bonus_reward"]
-                wallet_totals[name]["campaign_count"] += 1
-                if reward["claimed"]:
-                    wallet_totals[name]["claimed"] += reward["total_reward"]
-                else:
-                    wallet_totals[name]["unclaimed"] += reward["total_reward"]
+            campaign_name = get_campaign_name(campaign["campaign_hash"])
 
-    # 보상 요약 출력
-    print("\nWallet Rewards Summary:")
+            # 컨트랙트별로 보상 분리
+            rewards_by_contract: dict[str, list] = {}
+            for reward in rewards:
+                contract_addr = reward["contract_address"]
+                if contract_addr not in rewards_by_contract:
+                    rewards_by_contract[contract_addr] = []
+                rewards_by_contract[contract_addr].append(reward)
+
+            # 각 컨트랙트별로 집계
+            for contract_addr, contract_rewards in rewards_by_contract.items():
+                campaign_total = 0
+                campaign_unclaimed = 0
+                campaign_claimed = 0
+                campaign_wallet_rewards = []
+
+                for reward in contract_rewards:
+                    name = reward["wallet_name"]
+                    wallet_totals[name]["total_reward"] += reward["total_reward"]
+                    wallet_totals[name]["bonus_reward"] += reward["bonus_reward"]
+                    wallet_totals[name]["campaign_count"] += 1
+                    if reward["claimed"]:
+                        wallet_totals[name]["claimed"] += reward["total_reward"]
+                    else:
+                        wallet_totals[name]["unclaimed"] += reward["total_reward"]
+
+                    # 컨트랙트별 집계
+                    campaign_total += reward["total_reward"]
+                    if reward["claimed"]:
+                        campaign_claimed += reward["total_reward"]
+                    else:
+                        campaign_unclaimed += reward["total_reward"]
+
+                    # 캠페인 내 지갑별 보상 저장
+                    campaign_wallet_rewards.append({
+                        "wallet_name": name,
+                        "total_reward": reward["total_reward"],
+                        "claimed": reward["claimed"],
+                    })
+
+                # 컨트랙트별 집계 업데이트
+                if contract_addr in contract_totals:
+                    contract_totals[contract_addr]["total_reward"] += campaign_total
+                    contract_totals[contract_addr]["unclaimed"] += campaign_unclaimed
+                    contract_totals[contract_addr]["claimed"] += campaign_claimed
+                    contract_totals[contract_addr]["campaign_count"] += 1
+                    contract_totals[contract_addr]["campaigns"].append({
+                        "name": campaign_name,
+                        "total": campaign_total,
+                        "unclaimed": campaign_unclaimed,
+                        "wallet_rewards": campaign_wallet_rewards,
+                    })
+
+    # 컨트랙트별 상세 보상 요약 출력
+    print("\nDetailed Rewards by Contract:")
+    print("=" * 60)
+    contract_grand_total = 0
+    contract_grand_unclaimed = 0
+
+    for addr in monitor.contract_addresses:
+        totals = contract_totals[addr]
+        contract_grand_total += totals["total_reward"]
+        contract_grand_unclaimed += totals["unclaimed"]
+
+        print(f"\n[Contract: {addr[:10]}...{addr[-6:]}]")
+        if totals["total_reward"] > 0:
+            print(f"  Total: {wei_to_ether(totals['total_reward']):,.4f} ({totals['campaign_count']} campaigns)")
+
+            for campaign_data in totals["campaigns"]:
+                campaign_status = "Claimed" if campaign_data["unclaimed"] == 0 else "Unclaimed"
+                print(f"\n  Campaign: {campaign_data['name']}")
+                print(f"    Total: {wei_to_ether(campaign_data['total']):,.4f} ({campaign_status})")
+                print("    Wallets:")
+                for wr in campaign_data["wallet_rewards"]:
+                    wr_status = "Claimed" if wr["claimed"] else "Unclaimed"
+                    print(f"      - {wr['wallet_name']}: {wei_to_ether(wr['total_reward']):,.4f} ({wr_status})")
+        else:
+            print("  No rewards found")
+
+    # 전체 합계
+    if contract_grand_total > 0:
+        print("\n" + "-" * 60)
+        print(f"GRAND TOTAL: {wei_to_ether(contract_grand_total):,.4f}")
+        print(f"UNCLAIMED: {wei_to_ether(contract_grand_unclaimed):,.4f}")
+
+    # 지갑별 보상 요약 출력
+    print("\n" + "=" * 60)
+    print("Wallet Rewards Summary:")
     print("-" * 60)
     grand_total = 0
     grand_unclaimed = 0
