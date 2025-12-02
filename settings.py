@@ -17,7 +17,7 @@ DEFAULT_NETWORK = "testnet"
 
 RPC_URLS = {
     "mainnet": "http://127.0.0.1:9944",
-    "mainnet_remote": "https://mainnet.creditcoin.network",
+    "mainnet_remote": "https://mainnet3.creditcoin.network",
     "testnet": "https://rpc.cc3-testnet.creditcoin.network",
 }
 
