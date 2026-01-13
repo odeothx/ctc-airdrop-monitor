@@ -52,9 +52,6 @@ uv run python main.py
 
 # mainnet에서 조회
 uv run python main.py --network mainnet
-
-# 원격 mainnet RPC 사용
-uv run python main.py --network mainnet_remote
 ```
 
 ### 지갑 파일 지정
@@ -78,7 +75,7 @@ uv run python main.py --address 0x1234567890abcdef... --name "my_wallet"
 
 | 옵션 | 설명 | 기본값 |
 |------|------|--------|
-| `--network` | 네트워크 선택 (mainnet, mainnet_remote, testnet) | testnet |
+| `--network` | 네트워크 선택 (mainnet, testnet) | testnet |
 | `--wallets` | 지갑 JSON 파일 경로 | wallets.json |
 | `--address` | 단일 지갑 주소 (--wallets 대신 사용) | - |
 | `--name` | 단일 지갑의 이름 (--address와 함께 사용) | - |
@@ -106,10 +103,7 @@ uv run python main.py --address 0x1234567890abcdef... --name "my_wallet"
 
 #### 네트워크 설정
 
-| 네트워크 | RPC URL | 설명 |
-|----------|---------|------|
-| mainnet | http://127.0.0.1:9944 | 로컬 노드 필요 |
-| mainnet_remote | https://rpc.mainnet.creditcoin.network | 원격 노드 RPC |
+| mainnet | https://mainnet3.creditcoin.network | 메인넷 RPC |
 | testnet | https://rpc.cc3-testnet.creditcoin.network | 테스트넷 RPC |
 
 #### Blockscout API URLs

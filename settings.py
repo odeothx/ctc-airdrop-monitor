@@ -16,8 +16,7 @@ DEFAULT_NETWORK = "testnet"
 # =============================================================================
 
 RPC_URLS = {
-    "mainnet": "http://127.0.0.1:9944",
-    "mainnet_remote": "https://mainnet3.creditcoin.network",
+    "mainnet": "https://mainnet3.creditcoin.network",
     "testnet": "https://rpc.cc3-testnet.creditcoin.network",
 }
 
@@ -27,7 +26,6 @@ RPC_URLS = {
 
 BLOCKSCOUT_API_URLS = {
     "mainnet": "https://creditcoin.blockscout.com/api/v2",
-    "mainnet_remote": "https://creditcoin.blockscout.com/api/v2",
     "testnet": "https://creditcoin-testnet.blockscout.com/api/v2",
 }
 
@@ -35,22 +33,35 @@ BLOCKSCOUT_API_URLS = {
 # RedeemableAirdrop Contract Addresses
 # =============================================================================
 
-# Mainnet에 3개의 RedeemableAirdrop 컨트랙트가 존재
+# These contracts will always be monitored in addition to auto-discovered ones
 MAINNET_CONTRACTS = [
     "0xe272c3fb6d4ccf5A8bca94465f58b9c09f497Cd6",
-    "0x44D61789e4e6d2e06be032bD63fB2E86503B53A1",
     "0xC1f68532EE64AF333C43dfb7b4Ad93034F136e22",
+    "0x44D61789e4e6d2e06be032bD63fB2E86503B53A1",
 ]
 
+# Discovered RedeemableAirdrop contracts (17 contracts as of 2026-01-13)
 TESTNET_CONTRACTS = [
-    "0x824c6A8FB6311379bf8Ba10e90C1843B16E3A4cE",
-    "0xCc99690276912F7d965972D01E642dCcE5D2b660",
-    "0x44ADf468a466438DC59B0dF67356d3F934cF149B"
+    "0xdb648e6ffdd53e56fbf600196ebc645d49dda9ad",
+    "0x5a07fbd0ff67d23aa3972f1f7b4f5b4263787ba7",
+    "0x4aea34dbee8574505ccf0620cfda96e7a2a1945e",
+    "0x44adf468a466438dc59b0df67356d3f934cf149b",
+    "0x36cb9f680ab4ff9face7d55c3256804fa2e64293",
+    "0xa8661dd04177c7ec78144776807192766a9769e3",
+    "0x61b9e1e10e9329c69e06f4c90de8968bfeaae19e",
+    "0xc40aebef78d042c82f20b8dcd2ed181f49f613b3",
+    "0xc86cb334115d2d701a3a8a022d173c87280eb14d",
+    "0x3815a51e9b77fa0dc5acef59eaa952aa434b7c85",
+    "0x3ded4500e09c250bc21260eac87fd867b1c7eacc",
+    "0xc12ab1faeb1b3af2fc44f9c5692b90e0b3bc31a9",
+    "0xcc99690276912f7d965972d01e642dcce5d2b660",
+    "0x17dc105055db3b8b80980106de7c4dd3bab4f7f3",
+    "0x824c6a8fb6311379bf8ba10e90c1843b16e3a4ce",
+    "0x89c5dca027e96f594a15d22bd492ef22dcdc45a3",
+    "0xfb49e04e12fa09bfda530da73822fcdc5011740d",
 ]
-
 CONTRACT_ADDRESSES = {
     "mainnet": MAINNET_CONTRACTS[0],
-    "mainnet_remote": MAINNET_CONTRACTS[0],
     "testnet": TESTNET_CONTRACTS[0],
 }
 

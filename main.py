@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import json
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
 from typing import NamedTuple
@@ -121,17 +122,17 @@ class AirdropMonitor:
     def __init__(self, network: str = "testnet"):
         """
         Args:
-            network: 'mainnet', 'mainnet_remote', 또는 'testnet'
+            network: 'mainnet' 또는 'testnet'
         """
-        if network not in RPC_URLS:
-            raise ValueError(f"Unknown network: {network}. Use: {list(RPC_URLS.keys())}")
+        if network not in ("mainnet", "testnet"):
+            raise ValueError(f"Unknown network: {network}. Use: mainnet, testnet")
 
         self.network = network
         self.rpc_url = RPC_URLS[network]
         self.w3 = Web3(Web3.HTTPProvider(self.rpc_url))
 
         # 네트워크별 컨트랙트 주소 목록
-        if network in ("mainnet", "mainnet_remote"):
+        if network == "mainnet":
             self.contract_addresses = [
                 Web3.to_checksum_address(addr) for addr in MAINNET_CONTRACTS
             ]
@@ -139,6 +140,20 @@ class AirdropMonitor:
             self.contract_addresses = [
                 Web3.to_checksum_address(addr) for addr in TESTNET_CONTRACTS
             ]
+
+        # Blockscout API URL
+        self.blockscout_api_url = BLOCKSCOUT_API_URLS.get(network, BLOCKSCOUT_API_URLS["testnet"])
+
+        # 자동 컨트랙트 발견 (RedeemableAirdrop 이름으로 검색)
+        print(f"  Searching for 'RedeemableAirdrop' contracts on {network}...")
+        discovered_addrs = self.discover_contracts_by_name("RedeemableAirdrop")
+        
+        # 합치기 및 중복 제거
+        all_addrs = set(self.contract_addresses)
+        for addr in discovered_addrs:
+            all_addrs.add(addr)
+        
+        self.contract_addresses = sorted(list(all_addrs))
 
         # 기본 컨트랙트 (첫 번째)
         self.contract_address = self.contract_addresses[0]
@@ -152,9 +167,6 @@ class AirdropMonitor:
             for addr in self.contract_addresses
         ]
 
-        # Blockscout API URL
-        self.blockscout_api_url = BLOCKSCOUT_API_URLS.get(network, BLOCKSCOUT_API_URLS["testnet"])
-
     def is_connected(self) -> bool:
         """RPC 연결 확인"""
         return self.w3.is_connected()
@@ -162,6 +174,27 @@ class AirdropMonitor:
     # =========================================================================
     # Blockscout API Methods
     # =========================================================================
+
+    def discover_contracts_by_name(self, name: str) -> list[str]:
+        """Blockscout API를 통해 특정 이름의 컨트랙트 검색"""
+        try:
+            with httpx.Client(timeout=30.0) as client:
+                url = f"{self.blockscout_api_url}/search?q={name}"
+                response = client.get(url)
+                response.raise_for_status()
+                data = response.json()
+                
+                addresses = []
+                for item in data.get("items", []):
+                    # 타입이 컨트랙트이고 이름이 일치하며 검증된 경우만 포함
+                    if (item.get("type") == "contract" and 
+                        item.get("name") == name and 
+                        item.get("is_smart_contract_verified")):
+                        addresses.append(Web3.to_checksum_address(item.get("address_hash")))
+                return addresses
+        except Exception as e:
+            print(f"Error discovering contracts by name {name}: {e}")
+            return []
 
     def fetch_logs_from_blockscout(self, contract_address: str) -> list[dict]:
         """Blockscout API를 통해 컨트랙트의 이벤트 로그 조회"""
@@ -192,37 +225,45 @@ class AirdropMonitor:
             return []
 
     def discover_campaigns_from_blockscout(self) -> list[dict]:
-        """Blockscout API를 통해 모든 컨트랙트에서 캠페인 발견"""
+        """Blockscout API를 통해 모든 컨트랙트에서 캠페인 발견 (병렬 처리)"""
         all_campaigns = []
 
-        for contract_addr in self.contract_addresses:
-            print(f"  Fetching logs from Blockscout for {contract_addr}...")
-            logs = self.fetch_logs_from_blockscout(contract_addr)
+        def get_logs_for_contract(contract_addr):
+            # print(f"  Fetching logs from Blockscout for {contract_addr}...")
+            return contract_addr, self.fetch_logs_from_blockscout(contract_addr)
 
-            for log in logs:
-                decoded = log.get("decoded")
-                if not decoded:
-                    continue
+        with ThreadPoolExecutor(max_workers=min(len(self.contract_addresses), 10)) as executor:
+            future_to_addr = {
+                executor.submit(get_logs_for_contract, addr): addr 
+                for addr in self.contract_addresses
+            }
 
-                method_call = decoded.get("method_call", "")
+            for future in as_completed(future_to_addr):
+                contract_addr, logs = future.result()
+                for log in logs:
+                    decoded = log.get("decoded")
+                    if not decoded:
+                        continue
 
-                # RewardsAdded 이벤트 처리
-                if "RewardsAdded" in method_call:
-                    params = {p["name"]: p["value"] for p in decoded.get("parameters", [])}
-                    campaign_hash = params.get("campaignNameHash", "")
-                    token = params.get("token", "")
-                    start_date = int(params.get("startDate", 0))
-                    deadline = int(params.get("deadline", 0))
+                    method_call = decoded.get("method_call", "")
 
-                    all_campaigns.append({
-                        "contract_address": contract_addr,
-                        "campaign_hash": campaign_hash,
-                        "token": token,
-                        "start_date": start_date,
-                        "deadline": deadline,
-                        "block_number": log.get("block_number", 0),
-                        "tx_hash": log.get("transaction_hash", ""),
-                    })
+                    # RewardsAdded 이벤트 처리
+                    if "RewardsAdded" in method_call:
+                        params = {p["name"]: p["value"] for p in decoded.get("parameters", [])}
+                        campaign_hash = params.get("campaignNameHash", "")
+                        token = params.get("token", "")
+                        start_date = int(params.get("startDate", 0))
+                        deadline = int(params.get("deadline", 0))
+
+                        all_campaigns.append({
+                            "contract_address": contract_addr,
+                            "campaign_hash": campaign_hash,
+                            "token": token,
+                            "start_date": start_date,
+                            "deadline": deadline,
+                            "block_number": log.get("block_number", 0),
+                            "tx_hash": log.get("transaction_hash", ""),
+                        })
 
         # 중복 제거 (campaign_hash + contract_address 기준)
         seen = set()
@@ -584,6 +625,42 @@ class AirdropMonitor:
 
         return results
 
+    def check_wallets_by_campaign_hash_on_contract(
+        self, campaign_hash: bytes, wallets: dict[str, str], contract_address: str
+    ) -> list[WalletReward]:
+        """특정 컨트랙트에서 캠페인 해시로 여러 지갑의 리워드 조회"""
+        results = []
+        contract_addr = Web3.to_checksum_address(contract_address)
+        contract = self.w3.eth.contract(address=contract_addr, abi=REDEEMABLE_AIRDROP_ABI)
+
+        for name, address in wallets.items():
+            try:
+                wallet = Web3.to_checksum_address(address)
+                result = contract.functions.rewardInfoByHash(campaign_hash, wallet).call()
+                reward_info = RewardInfo(
+                    total_reward=result[0],
+                    bonus_reward=result[1],
+                    claimed=result[2],
+                    required_additional_verification=result[3],
+                )
+                
+                results.append(
+                    WalletReward(
+                        wallet_name=name,
+                        wallet_address=address,
+                        campaign_hash=campaign_hash.hex() if isinstance(campaign_hash, bytes) else campaign_hash,
+                        total_reward=reward_info.total_reward,
+                        bonus_reward=reward_info.bonus_reward,
+                        claimed=reward_info.claimed,
+                        required_additional_verification=reward_info.required_additional_verification,
+                    )
+                )
+            except Exception:
+                pass
+
+        return results
+
+
 
 # =============================================================================
 # Utility Functions
@@ -678,7 +755,7 @@ Examples:
     )
     parser.add_argument(
         "--network",
-        choices=["mainnet", "mainnet_remote", "testnet"],
+        choices=["mainnet", "testnet"],
         default="testnet",
         help="Network to connect to (default: testnet)",
     )
@@ -760,19 +837,44 @@ def main():
         campaigns_with_rewards = []
         campaigns_without_rewards = []
 
-        for campaign in discovered_campaigns:
+        def check_campaign(campaign):
             campaign_hash_hex = campaign['campaign_hash']
+            contract_addr = campaign['contract_address']
+            
             if campaign_hash_hex.startswith("0x"):
                 campaign_hash_hex = campaign_hash_hex[2:]
             campaign_hash_bytes = bytes.fromhex(campaign_hash_hex)
 
-            rewards = monitor.check_wallets_on_all_contracts(campaign_hash_bytes, wallets)
-            rewards_with_value = [r for r in rewards if r["total_reward"] > 0]
-
+            # 해당 캠페인이 발견된 컨트랙트에서만 지갑들 확인
+            rewards = monitor.check_wallets_by_campaign_hash_on_contract(
+                campaign_hash_bytes, wallets, contract_addr
+            )
+            rewards_with_value = [r for r in rewards if r.total_reward > 0]
+            
             if rewards_with_value:
-                campaigns_with_rewards.append((campaign, rewards_with_value))
-            else:
-                campaigns_without_rewards.append(campaign)
+                legacy_rewards = []
+                for r in rewards_with_value:
+                    legacy_rewards.append({
+                        "contract_address": contract_addr,
+                        "wallet_name": r.wallet_name,
+                        "wallet_address": r.wallet_address,
+                        "campaign_hash": r.campaign_hash,
+                        "total_reward": r.total_reward,
+                        "bonus_reward": r.bonus_reward,
+                        "claimed": r.claimed,
+                        "required_additional_verification": r.required_additional_verification,
+                    })
+                return (campaign, legacy_rewards)
+            return (None, campaign)
+
+        with ThreadPoolExecutor(max_workers=20) as executor:
+            futures = [executor.submit(check_campaign, c) for c in discovered_campaigns]
+            for future in as_completed(futures):
+                campaign_res, rewards_res = future.result()
+                if campaign_res is not None:
+                    campaigns_with_rewards.append((campaign_res, rewards_res))
+                else:
+                    campaigns_without_rewards.append(rewards_res)
 
         # 보상이 있는 캠페인 먼저 출력
         if campaigns_with_rewards:
@@ -813,45 +915,68 @@ def main():
     print("=" * 60)
 
     found_any = False
-    for i, contract in enumerate(monitor.contracts):
-        contract_addr = monitor.contract_addresses[i]
+    
+    def check_known_campaign(contract_idx, campaign_name):
+        contract_addr = monitor.contract_addresses[contract_idx]
+        contract = monitor.contracts[contract_idx]
+        try:
+            campaign_info_result = contract.functions.campaignInfo(campaign_name).call()
+            token_addr = campaign_info_result[0]
 
-        for campaign_name in KNOWN_CAMPAIGN_NAMES:
-            campaign_hash = monitor.get_campaign_name_hash(campaign_name)
+            if token_addr == "0x0000000000000000000000000000000000000000":
+                return None
 
-            try:
-                campaign_info_result = contract.functions.campaignInfo(campaign_name).call()
-                token_addr = campaign_info_result[0]
+            campaign_data = {
+                "name": campaign_name,
+                "contract_addr": contract_addr,
+                "token_addr": token_addr,
+                "info": campaign_info_result,
+                "wallet_rewards": []
+            }
 
-                if token_addr == "0x0000000000000000000000000000000000000000":
-                    continue
+            # 각 지갑 확인
+            for wallet_name, wallet_addr in wallets.items():
+                try:
+                    wallet_checksum = Web3.to_checksum_address(wallet_addr)
+                    reward_result = contract.functions.rewardInfo(campaign_name, wallet_checksum).call()
+                    if reward_result[0] > 0:
+                        campaign_data["wallet_rewards"].append({
+                            "name": wallet_name,
+                            "addr": wallet_addr,
+                            "reward": reward_result
+                        })
+                except Exception:
+                    pass
+            return campaign_data
+        except Exception:
+            return None
 
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        futures = []
+        for i in range(len(monitor.contracts)):
+            for campaign_name in KNOWN_CAMPAIGN_NAMES:
+                futures.append(executor.submit(check_known_campaign, i, campaign_name))
+        
+        for future in as_completed(futures):
+            res = future.result()
+            if res:
                 found_any = True
-                print(f"\n--- Campaign: {campaign_name} ---")
-                print(f"Contract: {contract_addr}")
-                print(f"Token: {token_addr}")
-                print(f"Start Date: {format_timestamp(campaign_info_result[1])}")
-                print(f"Deadline: {format_timestamp(campaign_info_result[2])}")
-                print(f"Total Amount: {wei_to_ether(campaign_info_result[4]):.4f}")
-                print(f"Total Claimed: {wei_to_ether(campaign_info_result[5]):.4f}")
+                print(f"\n--- Campaign: {res['name']} ---")
+                print(f"Contract: {res['contract_addr']}")
+                print(f"Token: {res['token_addr']}")
+                print(f"Start Date: {format_timestamp(res['info'][1])}")
+                print(f"Deadline: {format_timestamp(res['info'][2])}")
+                print(f"Total Amount: {wei_to_ether(res['info'][4]):.4f}")
+                print(f"Total Claimed: {wei_to_ether(res['info'][5]):.4f}")
 
-                # 각 지갑 확인
-                print("\n--- Wallet Rewards ---")
-                for wallet_name, wallet_addr in wallets.items():
-                    try:
-                        wallet_checksum = Web3.to_checksum_address(wallet_addr)
-                        reward_result = contract.functions.rewardInfo(campaign_name, wallet_checksum).call()
-                        if reward_result[0] > 0:
-                            print(f"\n  [{wallet_name}]")
-                            print(f"  Address: {wallet_addr}")
-                            print(f"  Total Reward: {wei_to_ether(reward_result[0]):.4f}")
-                            print(f"  Bonus Reward: {wei_to_ether(reward_result[1]):.4f}")
-                            print(f"  Claimed: {'Yes' if reward_result[2] else 'No'}")
-                    except Exception:
-                        pass
-
-            except Exception:
-                pass
+                if res['wallet_rewards']:
+                    print("\n--- Wallet Rewards ---")
+                    for wr in res['wallet_rewards']:
+                        print(f"\n  [{wr['name']}]")
+                        print(f"  Address: {wr['addr']}")
+                        print(f"  Total Reward: {wei_to_ether(wr['reward'][0]):.4f}")
+                        print(f"  Bonus Reward: {wei_to_ether(wr['reward'][1]):.4f}")
+                        print(f"  Claimed: {'Yes' if wr['reward'][2] else 'No'}")
 
     if not found_any:
         print("\nNo active campaigns found with known names.")
