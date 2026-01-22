@@ -230,6 +230,9 @@ class AirdropMonitor:
         self.rpc_url = RPC_URLS[network]
         self.w3 = Web3(Web3.HTTPProvider(self.rpc_url))
         self.cache = CacheManager(network)
+        
+        # HTTP 클라이언트 세션 유지 (가장 먼저 초기화하여 다른 메서드에서 사용 가능하게 함)
+        self.client = httpx.Client(timeout=30.0)
 
         # 네트워크별 컨트랙트 주소 목록
         if network == "mainnet":
@@ -270,9 +273,6 @@ class AirdropMonitor:
             self.w3.eth.contract(address=addr, abi=REDEEMABLE_AIRDROP_ABI)
             for addr in self.contract_addresses
         ]
-
-        # HTTP 클라이언트 세션 유지
-        self.client = httpx.Client(timeout=30.0)
 
     def close(self):
         """자원 정리"""
