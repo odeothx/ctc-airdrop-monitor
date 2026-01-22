@@ -122,7 +122,11 @@ uv run python main.py --address 0x1234567890abcdef... --name "my_wallet"
 - 0xC1f68532EE64AF333C43dfb7b4Ad93034F136e22
 
 **Testnet:**
-- 0x824c6A8FB6311379bf8Ba10e90C1843B16E3A4cE
+기본적으로 `settings.py`에 정의된 17개의 컨트랙트를 모니터링하며, `--discover` 옵션 사용 시 추가로 발견된 컨트랙트도 포함합니다.
+
+#### 자동 컨트랙트 발견 (--discover)
+
+`--discover` 옵션을 사용하면 Blockscout API를 통해 "RedeemableAirdrop"이라는 이름으로 생성되고 검증된 모든 컨트랙트를 실시간으로 찾아내어 조회 대상에 포함합니다.
 
 #### 토큰 주소
 
