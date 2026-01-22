@@ -1,0 +1,11 @@
+{
+  "0x85ca6639521c580d26e4faf43da7f14992f6dce505b7b58e4b5975c4b9aace76": {
+    "contract_address": "0x4AeA34DbEE8574505CCf0620CfdA96e7A2A1945E",
+    "campaign_hash": "0x85ca6639521c580d26e4faf43da7f14992f6dce505b7b58e4b5975c4b9aace76",
+    "token": "0xfaFAd008f017C326B62FbfddA7fb2335A5c82247",
+    "start_date": 1764015877,
+    "deadline": 1764213876,
+    "block_number": 3796775,
+    "tx_hash": "0x947b4af97939dbe24382aec25a7d9975d3f5e52c5bd5e26a0ae962755629b0e4"
+  }
+}

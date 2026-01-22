@@ -1,0 +1,92 @@
+{
+  "0x02de160a846e1b829c7ac872dbe8f54e3e32d92ceadc610767332eff24eb5717": {
+    "contract_address": "0x282eb6C0d790f74359Cd92C0B381BDBF923E2460",
+    "campaign_hash": "0x02de160a846e1b829c7ac872dbe8f54e3e32d92ceadc610767332eff24eb5717",
+    "token": "0xfaFAd008f017C326B62FbfddA7fb2335A5c82247",
+    "start_date": 1768268700,
+    "deadline": 1769046300,
+    "block_number": 4123135,
+    "tx_hash": "0x30b6d96bccd73f19bd2834a35f1f246137aca54124b5cf2173baffabe92e9370"
+  },
+  "0xc74136f62e6393171191fbe5649ddc73cd82054c667335b7408829fd56797516": {
+    "contract_address": "0x282eb6C0d790f74359Cd92C0B381BDBF923E2460",
+    "campaign_hash": "0xc74136f62e6393171191fbe5649ddc73cd82054c667335b7408829fd56797516",
+    "token": "0xfaFAd008f017C326B62FbfddA7fb2335A5c82247",
+    "start_date": 1776225600,
+    "deadline": 1777564800,
+    "block_number": 4123120,
+    "tx_hash": "0x055f248f4466976b1adb6e64a325ae8566aba299b7f09e2ec09f2f1b2dea6c0b"
+  },
+  "0xb1c13b535ec1eaa734b53664c591743a833c01839ba16e07c693d395e907b769": {
+    "contract_address": "0x282eb6C0d790f74359Cd92C0B381BDBF923E2460",
+    "campaign_hash": "0xb1c13b535ec1eaa734b53664c591743a833c01839ba16e07c693d395e907b769",
+    "token": "0xfaFAd008f017C326B62FbfddA7fb2335A5c82247",
+    "start_date": 1773550800,
+    "deadline": 1774972800,
+    "block_number": 4123119,
+    "tx_hash": "0x5f1075f81c79c4704dad0f3f5e3fb347f882287d3186b5eefeaf3f4638455bcd"
+  },
+  "0x2a65f9f2372adef963edcb66cab3142ca4e8d2d344580e43484a4bc00a559256": {
+    "contract_address": "0x282eb6C0d790f74359Cd92C0B381BDBF923E2460",
+    "campaign_hash": "0x2a65f9f2372adef963edcb66cab3142ca4e8d2d344580e43484a4bc00a559256",
+    "token": "0xfaFAd008f017C326B62FbfddA7fb2335A5c82247",
+    "start_date": 1771131600,
+    "deadline": 1772298000,
+    "block_number": 4123116,
+    "tx_hash": "0xb6a7bdbab341204d54ce8190fb8f4f6a47111af43ecc753ea7ba12323a3e69c3"
+  },
+  "0x720d89c0cc85c3c83fa9859150e98cf944c2030791d8d56eb8fffa7d2e753011": {
+    "contract_address": "0x282eb6C0d790f74359Cd92C0B381BDBF923E2460",
+    "campaign_hash": "0x720d89c0cc85c3c83fa9859150e98cf944c2030791d8d56eb8fffa7d2e753011",
+    "token": "0xfaFAd008f017C326B62FbfddA7fb2335A5c82247",
+    "start_date": 1768268700,
+    "deadline": 1769046300,
+    "block_number": 4123114,
+    "tx_hash": "0x08ffe93e458a15015075889aea3ffe96c781540a1fbb198052d2beef77a3fc2b"
+  },
+  "0xb1f5781603e729275fda9e381aefdf9a128ff0de7b28e90ecab276b7ef6de83e": {
+    "contract_address": "0x282eb6C0d790f74359Cd92C0B381BDBF923E2460",
+    "campaign_hash": "0xb1f5781603e729275fda9e381aefdf9a128ff0de7b28e90ecab276b7ef6de83e",
+    "token": "0xfaFAd008f017C326B62FbfddA7fb2335A5c82247",
+    "start_date": 1768873500,
+    "deadline": 1769046300,
+    "block_number": 4118189,
+    "tx_hash": "0x9425da689b00854bc0848bfa81fdb6d87cee25e8a348db17e638e834ba5f6361"
+  },
+  "0x44a6b206e73e15fb8a315d44ee2b4305e1e4d5f2d9ed99a569f5126dd7b618d8": {
+    "contract_address": "0x282eb6C0d790f74359Cd92C0B381BDBF923E2460",
+    "campaign_hash": "0x44a6b206e73e15fb8a315d44ee2b4305e1e4d5f2d9ed99a569f5126dd7b618d8",
+    "token": "0xfaFAd008f017C326B62FbfddA7fb2335A5c82247",
+    "start_date": 1769749200,
+    "deadline": 1769878800,
+    "block_number": 4118178,
+    "tx_hash": "0x88227705215311266cd6f678e8504245e9ef63ee45555446e19624a45b4e8adf"
+  },
+  "0xa1c3762181f85d6ed673f387edb744dca1486ba1cbb81297e1130d1a00fd62f8": {
+    "contract_address": "0x282eb6C0d790f74359Cd92C0B381BDBF923E2460",
+    "campaign_hash": "0xa1c3762181f85d6ed673f387edb744dca1486ba1cbb81297e1130d1a00fd62f8",
+    "token": "0xfaFAd008f017C326B62FbfddA7fb2335A5c82247",
+    "start_date": 1769749200,
+    "deadline": 1769878800,
+    "block_number": 4118177,
+    "tx_hash": "0x3564bb71930654fec4a0c27ab93bc0acbec1eb1e890b54acfe85b3e4db24552c"
+  },
+  "0xd31a54fc853306780f82d79f179ff9feb2a80714a6868400c522db4976b4cec6": {
+    "contract_address": "0x282eb6C0d790f74359Cd92C0B381BDBF923E2460",
+    "campaign_hash": "0xd31a54fc853306780f82d79f179ff9feb2a80714a6868400c522db4976b4cec6",
+    "token": "0xfaFAd008f017C326B62FbfddA7fb2335A5c82247",
+    "start_date": 1769749200,
+    "deadline": 1769878800,
+    "block_number": 4118176,
+    "tx_hash": "0x8c57a262bb6458b067c812f8c506e8a435f81de68888a4bf3d47c2d49a12637e"
+  },
+  "0x3c9418627a39eac26cfbad745f36dfb24bd6faeab2cdafc8d170fc86661070ea": {
+    "contract_address": "0x282eb6C0d790f74359Cd92C0B381BDBF923E2460",
+    "campaign_hash": "0x3c9418627a39eac26cfbad745f36dfb24bd6faeab2cdafc8d170fc86661070ea",
+    "token": "0xfaFAd008f017C326B62FbfddA7fb2335A5c82247",
+    "start_date": 1768873500,
+    "deadline": 1769046300,
+    "block_number": 4118169,
+    "tx_hash": "0x331c4cd69dcec546b42226d8201d225564178123372158b23ff97755769610c8"
+  }
+}
