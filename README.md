@@ -47,11 +47,11 @@ python main.py
 ### 기본 사용
 
 ```bash
-# testnet에서 wallets.json 지갑들 조회 (기본값)
+# mainnet에서 wallets.json 지갑들 조회 (기본값)
 uv run python main.py
 
-# mainnet에서 조회
-uv run python main.py --network mainnet
+# testnet에서 조회
+uv run python main.py --network testnet
 ```
 
 ### 지갑 파일 지정
@@ -75,7 +75,8 @@ uv run python main.py --address 0x1234567890abcdef... --name "my_wallet"
 
 | 옵션 | 설명 | 기본값 |
 |------|------|--------|
-| `--network` | 네트워크 선택 (mainnet, testnet) | testnet |
+| `--network` | 네트워크 선택 (mainnet, testnet) | mainnet |
+| `--discover` | Blockscout API를 통해 컨트랙트 자동 탐색 | False |
 | `--wallets` | 지갑 JSON 파일 경로 | wallets.json |
 | `--address` | 단일 지갑 주소 (--wallets 대신 사용) | - |
 | `--name` | 단일 지갑의 이름 (--address와 함께 사용) | - |

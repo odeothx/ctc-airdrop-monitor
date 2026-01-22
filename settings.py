@@ -9,7 +9,7 @@ Spacecoin Airdrop Monitor Settings
 # =============================================================================
 
 DEFAULT_WALLETS_FILE = "wallets.json"
-DEFAULT_NETWORK = "testnet"
+DEFAULT_NETWORK = "mainnet"
 
 # =============================================================================
 # Network RPC URLs
@@ -36,8 +36,8 @@ BLOCKSCOUT_API_URLS = {
 # These contracts will always be monitored in addition to auto-discovered ones
 MAINNET_CONTRACTS = [
     "0xe272c3fb6d4ccf5A8bca94465f58b9c09f497Cd6",
-    "0xC1f68532EE64AF333C43dfb7b4Ad93034F136e22",
-    "0x44D61789e4e6d2e06be032bD63fB2E86503B53A1",
+    # "0xC1f68532EE64AF333C43dfb7b4Ad93034F136e22",
+    # "0x44D61789e4e6d2e06be032bD63fB2E86503B53A1",
 ]
 
 # Discovered RedeemableAirdrop contracts (17 contracts as of 2026-01-13)

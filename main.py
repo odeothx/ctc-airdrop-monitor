@@ -119,10 +119,11 @@ class WalletReward(NamedTuple):
 class AirdropMonitor:
     """Spacecoin 에어드랍 모니터"""
 
-    def __init__(self, network: str = "testnet"):
+    def __init__(self, network: str = "mainnet", discover: bool = False):
         """
         Args:
             network: 'mainnet' 또는 'testnet'
+            discover: 컨트랙트 자동 발견 여부
         """
         if network not in ("mainnet", "testnet"):
             raise ValueError(f"Unknown network: {network}. Use: mainnet, testnet")
@@ -144,16 +145,20 @@ class AirdropMonitor:
         # Blockscout API URL
         self.blockscout_api_url = BLOCKSCOUT_API_URLS.get(network, BLOCKSCOUT_API_URLS["testnet"])
 
-        # 자동 컨트랙트 발견 (RedeemableAirdrop 이름으로 검색)
-        print(f"  Searching for 'RedeemableAirdrop' contracts on {network}...")
-        discovered_addrs = self.discover_contracts_by_name("RedeemableAirdrop")
-        
-        # 합치기 및 중복 제거
-        all_addrs = set(self.contract_addresses)
-        for addr in discovered_addrs:
-            all_addrs.add(addr)
-        
-        self.contract_addresses = sorted(list(all_addrs))
+        # 자동 컨트랙트 발견 (RedeemableAirdrop 이름으로 검색, discover 옵션이 켜진 경우만)
+        if discover:
+            print(f"  Searching for 'RedeemableAirdrop' contracts on {network}...")
+            discovered_addrs = self.discover_contracts_by_name("RedeemableAirdrop")
+            
+            # 합치기 및 중복 제거
+            all_addrs = set(self.contract_addresses)
+            for addr in discovered_addrs:
+                all_addrs.add(addr)
+            
+            self.contract_addresses = sorted(list(all_addrs))
+        else:
+            # discover 옵션이 꺼진 경우 중복만 제거
+            self.contract_addresses = sorted(list(set(self.contract_addresses)))
 
         # 기본 컨트랙트 (첫 번째)
         self.contract_address = self.contract_addresses[0]
@@ -756,8 +761,13 @@ Examples:
     parser.add_argument(
         "--network",
         choices=["mainnet", "testnet"],
-        default="testnet",
-        help="Network to connect to (default: testnet)",
+        default="mainnet",
+        help="Network to connect to (default: mainnet)",
+    )
+    parser.add_argument(
+        "--discover",
+        action="store_true",
+        help="Automatically discover 'RedeemableAirdrop' contracts via Blockscout API",
     )
     parser.add_argument(
         "--block-range",
@@ -805,7 +815,7 @@ def main():
 
     # 모니터 초기화
     try:
-        monitor = AirdropMonitor(network=network)
+        monitor = AirdropMonitor(network=network, discover=args.discover)
     except Exception as e:
         print(f"Failed to initialize monitor: {e}")
         return
