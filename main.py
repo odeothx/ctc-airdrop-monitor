@@ -1061,6 +1061,7 @@ def run_known_names_phase(monitor, wallets):
     print("=" * 60)
 
     found_any = False
+    all_found_rewards = []
     
     def check_known_campaign(contract_idx, campaign_name):
         contract_addr = monitor.contract_addresses[contract_idx]
@@ -1072,10 +1073,13 @@ def run_known_names_phase(monitor, wallets):
             if token_addr == "0x0000000000000000000000000000000000000000":
                 return None
 
+            campaign_hash = Web3.keccak(text=campaign_name)
             campaign_data = {
                 "name": campaign_name,
-                "contract_addr": contract_addr,
-                "token_addr": token_addr,
+                "campaign_hash": campaign_hash.hex(),
+                "contract_address": contract_addr,
+                "token": token_addr,
+                "deadline": campaign_info_result[2],
                 "info": campaign_info_result,
                 "wallet_rewards": []
             }
@@ -1084,12 +1088,17 @@ def run_known_names_phase(monitor, wallets):
                 try:
                     wallet_checksum = Web3.to_checksum_address(wallet_addr)
                     reward_result = contract.functions.rewardInfo(campaign_name, wallet_checksum).call()
-                    if reward_result[0] > 0:
-                        campaign_data["wallet_rewards"].append({
-                            "name": wallet_name,
-                            "addr": wallet_addr,
-                            "reward": reward_result
-                        })
+                    if reward_result[0] > 0 or reward_result[1] > 0: # total or bonus > 0
+                        wallet_reward = WalletReward(
+                            wallet_name=wallet_name,
+                            wallet_address=wallet_addr,
+                            campaign_hash=campaign_hash.hex(),
+                            total_reward=reward_result[0],
+                            bonus_reward=reward_result[1],
+                            claimed=reward_result[2],
+                            required_additional_verification=reward_result[3],
+                        )
+                        campaign_data["wallet_rewards"].append(wallet_reward)
                 except Exception:
                     pass
             return campaign_data
@@ -1106,9 +1115,17 @@ def run_known_names_phase(monitor, wallets):
             res = future.result()
             if res:
                 found_any = True
+                if res['wallet_rewards']:
+                    all_found_rewards.append(({
+                        "campaign_hash": res["campaign_hash"],
+                        "contract_address": res["contract_address"],
+                        "token": res["token"],
+                        "deadline": res["deadline"]
+                    }, res["wallet_rewards"]))
+
                 print(f"\n--- Campaign: {res['name']} ---")
-                print(f"Contract: {res['contract_addr']}")
-                print(f"Token: {res['token_addr']}")
+                print(f"Contract: {res['contract_addr'] if 'contract_addr' in res else res['contract_address']}")
+                print(f"Token: {res['token_addr'] if 'token_addr' in res else res['token']}")
                 print(f"Start Date: {format_timestamp(res['info'][1])}")
                 print(f"Deadline: {format_timestamp(res['info'][2])}")
                 print(f"Total Amount: {wei_to_ether(res['info'][4]):.4f}")
@@ -1117,14 +1134,13 @@ def run_known_names_phase(monitor, wallets):
                 if res['wallet_rewards']:
                     print("\n--- Wallet Rewards ---")
                     for wr in res['wallet_rewards']:
-                        print(f"\n  [{wr['name']}]")
-                        print(f"  Address: {wr['addr']}")
-                        print(f"  Total Reward: {wei_to_ether(wr['reward'][0]):.4f}")
-                        print(f"  Bonus Reward: {wei_to_ether(wr['reward'][1]):.4f}")
-                        print(f"  Claimed: {'Yes' if wr['reward'][2] else 'No'}")
+                        print_reward_info(wr)
 
     if not found_any:
         print("\nNo active campaigns found with known names.")
+    
+    return all_found_rewards
+
 
 
 def print_summary(monitor, wallets, campaigns_with_rewards):
@@ -1134,7 +1150,8 @@ def print_summary(monitor, wallets, campaigns_with_rewards):
     print("=" * 60)
 
     wallet_totals = {name: {"total_reward": 0, "bonus_reward": 0, "unclaimed": 0, "claimed": 0, "campaign_count": 0} for name in wallets}
-    contract_totals = {addr: {"total_reward": 0, "unclaimed": 0, "claimed": 0, "campaign_count": 0, "campaigns": []} for addr in monitor.contract_addresses}
+    contract_totals = {addr: {"total_reward": 0, "bonus_reward": 0, "unclaimed": 0, "claimed": 0, "campaign_count": 0, "campaigns": []} for addr in monitor.contract_addresses}
+
 
     for campaign, rewards in campaigns_with_rewards:
         campaign_name = get_campaign_name(campaign["campaign_hash"])
@@ -1146,17 +1163,21 @@ def print_summary(monitor, wallets, campaigns_with_rewards):
             wallet_totals[name]["total_reward"] += r.total_reward
             wallet_totals[name]["bonus_reward"] += r.bonus_reward
             wallet_totals[name]["campaign_count"] += 1
+            
+            combined_reward = r.total_reward + r.bonus_reward
             if r.claimed:
-                wallet_totals[name]["claimed"] += r.total_reward
+                wallet_totals[name]["claimed"] += combined_reward
             else:
-                wallet_totals[name]["unclaimed"] += r.total_reward
+                wallet_totals[name]["unclaimed"] += combined_reward
 
             if contract_addr in contract_totals:
                 contract_totals[contract_addr]["total_reward"] += r.total_reward
+                contract_totals[contract_addr]["bonus_reward"] += r.bonus_reward
                 if r.claimed:
-                    contract_totals[contract_addr]["claimed"] += r.total_reward
+                    contract_totals[contract_addr]["claimed"] += combined_reward
                 else:
-                    contract_totals[contract_addr]["unclaimed"] += r.total_reward
+                    contract_totals[contract_addr]["unclaimed"] += combined_reward
+
                 
                 # 캠페인별 요약 추가 (중복 방지)
                 existing_campaign = next((c for c in contract_totals[contract_addr]["campaigns"] if c["name"] == campaign_name), None)
@@ -1196,13 +1217,16 @@ def print_summary(monitor, wallets, campaigns_with_rewards):
     print("-" * 60)
     grand_total = 0
     for name, totals in wallet_totals.items():
-        grand_total += totals["total_reward"]
+        combined_total = totals["total_reward"] + totals["bonus_reward"]
+        grand_total += combined_total
         status = "Claimed" if totals["unclaimed"] == 0 else "Unclaimed"
-        print(f"  {name}: {wei_to_ether(totals['total_reward']):,.4f} ({status})")
+        bonus_str = f" (incl. {wei_to_ether(totals['bonus_reward']):,.4f} bonus)" if totals["bonus_reward"] > 0 else ""
+        print(f"  {name}: {wei_to_ether(combined_total):,.4f}{bonus_str} ({status})")
 
     print("-" * 60)
     print(f"  TOTAL: {wei_to_ether(grand_total):,.4f}")
     print(f"  Unclaimed: {wei_to_ether(grand_total_unclaimed):,.4f}")
+
     
     print("\nMonitored Contracts (Blockscout):")
     base_url = monitor.blockscout_api_url.replace("/api/v2", "")
@@ -1234,13 +1258,15 @@ def main():
         print(f"\nConnected to {network}. Latest block: {monitor.w3.eth.block_number}")
         
         # 1. 탐색 단계
-        campaigns_with_rewards, _ = run_discovery_phase(monitor, wallets)
+        discovery_rewards, _ = run_discovery_phase(monitor, wallets)
         
         # 2. 알려진 캠페인 확인 단계
-        run_known_names_phase(monitor, wallets)
+        known_rewards = run_known_names_phase(monitor, wallets)
         
         # 3. 요약 단계
-        print_summary(monitor, wallets, campaigns_with_rewards)
+        all_campaigns_with_rewards = discovery_rewards + known_rewards
+        print_summary(monitor, wallets, all_campaigns_with_rewards)
+
 
     except Exception as e:
         logging.exception(f"Unexpected error: {e}")
